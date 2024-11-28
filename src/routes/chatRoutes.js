@@ -3,12 +3,13 @@
 const express = require('express');
 const router = express.Router();
 const chatController = require('../controllers/chatController');
+const authenticateToken = require('../middlewares/authMiddleware');
 
 
 // Tạo phòng chat mới
-router.post('/create', chatController.createChatRoom);
+router.post('/create', authenticateToken, chatController.createChatRoom);
 
 // Lấy danh sách phòng chat của người dùng
-router.get('/:user_id', chatController.getUserChats);
+router.get('/chatrooms', authenticateToken,  chatController.getUserChats);
 
 module.exports = router;

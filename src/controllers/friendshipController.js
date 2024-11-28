@@ -11,7 +11,6 @@ const searchUsers = async (req, res) => {
         const users = await User.find({
             $or: [
                 { username: { $regex: query, $options: 'i' } }, // Tìm theo tên
-                { email: { $regex: query, $options: 'i' } } // Tìm theo email
             ],
             _id: { $ne: userId } // Loại trừ chính người dùng hiện tại
         });
