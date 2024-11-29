@@ -154,7 +154,7 @@ const getFriendsList = async (req, res) => {
 
         // Lấy thông tin chi tiết của bạn bè
         const friends = await User.find({ _id: { $in: friendIds } })
-            .select('username email');
+            .select('username email avatar_url bio');
 
 
         res.json({ friends });
