@@ -1,5 +1,6 @@
 const Friendship = require('../models/Friendship');
 const User = require('../models/User');
+const ChatRoom = require('../models/Chat');
 
 // Tìm kiếm người dùng để gửi lời mời kết bạn
 const searchUsers = async (req, res) => {
@@ -154,14 +155,37 @@ const getFriendsList = async (req, res) => {
 
         // Lấy thông tin chi tiết của bạn bè
         const friends = await User.find({ _id: { $in: friendIds } })
-            .select('username email avatar_url bio');
+            .select('username email avatar_url bio')
+            .lean();
 
+        // Lấy danh sách ChatRooms
+        const chatRooms = await ChatRoom.find({
+            type: 'private',
+            members: { $all: [userId] } // Tìm chatrooms chứa userId hiện tại và bạn bè
+        }).lean();
 
-        res.json({ friends });
+        // Tạo map để tra cứu nhanh thông tin ChatRoom
+        const chatRoomMap = {};
+        chatRooms.forEach(chatRoom => {
+            chatRoom.members.forEach(member => {
+                if (member.toString() !== userId) {
+                    chatRoomMap[member.toString()] = chatRoom;
+                }
+            });
+        });
+
+        // Kết hợp thông tin ChatRoom vào danh sách bạn bè
+        const friendsWithChatRooms = friends.map(friend => ({
+            ...friend,
+            chatRoom: chatRoomMap[friend._id.toString()] || null, // Nếu không có chatroom, đặt giá trị null
+        }));
+
+        res.json({ friends: friendsWithChatRooms, userId: userId });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 // Lấy danh sách người gửi yêu cầu kết bạn (đang chờ xác nhận)
 const getSentRequests = async (req, res) => {

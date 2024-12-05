@@ -21,12 +21,15 @@ const createChatRoom = async (req, res) => {
             const existingChatRoom = await ChatRoom.findOne({
                 members: { $all: uniqueMembers, $size: uniqueMembers.length },
                 type: 'private',
-            }).exec();
+            }).populate('members', 'username avatar_url').exec();
 
             if (existingChatRoom) {
+                // Định dạng thông tin phòng chat
+                const formattedChatRoom = formatChatRoom(existingChatRoom, req.userId);
+
                 return res.status(200).json({
                     message: 'Private chat room already exists',
-                    chatRoom: existingChatRoom,
+                    chatRoom: formattedChatRoom,
                 });
             }
         }
@@ -40,15 +43,46 @@ const createChatRoom = async (req, res) => {
 
         await newChatRoom.save();
 
+        // Populate thông tin thành viên trước khi định dạng
+        const populatedChatRoom = await ChatRoom.findById(newChatRoom._id)
+            .populate('members', 'username avatar_url')
+            .exec();
+
+        // Định dạng thông tin phòng chat
+        const formattedChatRoom = formatChatRoom(populatedChatRoom, req.userId);
+
         res.status(201).json({
             message: 'Chat room created successfully',
-            chatRoom: newChatRoom,
+            chatRoom: formattedChatRoom,
         });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
+
+// Hàm định dạng phòng chat
+const formatChatRoom = (chatRoom, userId) => {
+    if (chatRoom.type === 'private') {
+        const friend = chatRoom.members.find(
+            member => member._id.toString() !== userId
+        );
+
+        return {
+            _id: chatRoom._id,
+            type: 'private',
+            displayName: friend ? friend.username : 'Unknown User',
+            avatar: friend ? friend.avatar_url : null,
+        };
+    } else {
+        return {
+            _id: chatRoom._id,
+            type: 'group',
+            displayName: chatRoom.name || 'Group Chat',
+        };
+    }
+};
+
 
 
 // Lấy danh sách phòng chat của người dùng
