@@ -32,6 +32,7 @@ const friendshipRoutes = require('./routes/friendshipRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const pushNotificationRoutes = require('./routes/pushNotificationRoutes');
 
 // Use routes
 app.use('/api/users', userRoutes);
@@ -41,6 +42,7 @@ app.use('/api/friendships', friendshipRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/notifications', pushNotificationRoutes);
 
 // Export the app for server to use
 module.exports = app;

@@ -96,7 +96,7 @@ const verifyOtp = async (req, res) => {
 
 // Đăng nhập người dùng
 const login = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, firebaseToken } = req.body; // Thêm firebaseToken từ request body
 
     try {
         const user = await User.findOne({ email });
@@ -111,8 +111,13 @@ const login = async (req, res) => {
         // Tạo Refresh Token
         const refreshToken = crypto.randomBytes(64).toString('hex');
 
-        // Lưu Refresh Token vào user
+        // Lưu Refresh Token và Firebase Token vào user
         user.refresh_token = refreshToken;
+
+        if (firebaseToken) {
+            user.firebaseToken = firebaseToken; // Cập nhật firebaseToken nếu có
+        }
+
         await user.save();
 
         res.json({
@@ -124,6 +129,7 @@ const login = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 const refreshAccessToken = async (req, res) => {
     const { refreshToken } = req.body;

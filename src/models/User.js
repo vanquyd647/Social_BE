@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
                 createdAt: { type: Date, default: Date.now }, // Thời gian gửi yêu cầu
             },
         ],
+        firebaseToken: { type: String },
         refresh_token: { type: String },
         otp: { type: String },
         otp_expires: { type: Date },

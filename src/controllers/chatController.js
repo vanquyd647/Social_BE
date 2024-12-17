@@ -117,6 +117,7 @@ const getUserChats = async (req, res) => {
                     type: 'private',
                     displayName: friend ? friend.username : 'Unknown User', // Tên bạn bè hoặc mặc định
                     avatar: friend ? friend.avatar_url : null, // Avatar bạn bè nếu có
+                    recipient_id: friend ? friend._id.toString() : null, // recipient_id là ID của người còn lại
                 };
             } else {
                 // Hiển thị thông tin phòng nhóm
@@ -124,6 +125,7 @@ const getUserChats = async (req, res) => {
                     _id: chatRoom._id,
                     type: 'group',
                     displayName: chatRoom.name || 'Group Chat', // Tên nhóm hoặc mặc định
+                    recipient_id: null, // Phòng nhóm không có recipient_id
                 };
             }
         });
@@ -134,10 +136,12 @@ const getUserChats = async (req, res) => {
             chatRooms: formattedChatRooms,
             userId: req.userId,
         });
+
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        res.status(500).json({ message: 'An error occurred while fetching chat rooms.' });
     }
+
 };
 
 

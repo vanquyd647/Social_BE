@@ -2,9 +2,11 @@ require('dotenv').config();
 const http = require('http');
 const { Server } = require('socket.io');
 const app = require('./src/app');
-const Message = require('./src/models/Message'); 
+const Message = require('./src/models/Message');
 const mongoose = require('mongoose');
 const PORT = process.env.PORT || 5000;
+const admin = require('./src/configs/firebaseAdmin');
+const ChatRoom = require('./src/models/Chat'); // Đảm bảo model ChatRoom đã được import
 
 // Create HTTP server with Express
 const server = http.createServer(app);
@@ -55,9 +57,43 @@ io.on('connection', (socket) => {
                 content,
                 timestamp: new Date(),
             });
+
+            // Fetch room members to send FCM notifications
+            const room = await ChatRoom.findById(room_id).populate({
+                path: 'members',
+                select: 'firebaseToken', // Populate only the firebaseToken field
+            });
+
+            if (!room) {
+                console.error('Room not found.');
+                return;
+            }
+
+            // Send FCM to all other members in the room (excluding sender)
+            for (const member of room.members) {
+                if (member._id.toString() !== sender_id && member.firebaseToken) {
+                    const fcmMessage = {
+                        notification: {
+                            title: 'New Message',
+                            body: content,
+                        },
+                        token: member.firebaseToken,
+                    };
+
+                    // Send FCM using Firebase Admin SDK
+                    await admin.messaging().send(fcmMessage)
+                        .then((response) => {
+                            console.log(`FCM sent to ${member._id}:`, response);
+                        })
+                        .catch((error) => {
+                            console.error(`Error sending FCM to ${member._id}:`, error.message);
+                        });
+                }
+            }
+
         } catch (error) {
-            console.error('Error saving message:', error.message);
-            socket.emit('errorMessage', 'There was an error saving your message.');
+            console.error('Error processing sendMessage:', error.message);
+            socket.emit('errorMessage', 'There was an error processing your message.');
         }
     });
 
