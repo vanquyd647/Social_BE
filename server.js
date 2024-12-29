@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const PORT = process.env.PORT || 5000;
 const admin = require('./src/configs/firebaseAdmin');
 const ChatRoom = require('./src/models/Chat'); // Đảm bảo model ChatRoom đã được import
+const Notification = require('./src/models/Notification');
 
 // Create HTTP server with Express
 const server = http.createServer(app);
@@ -31,9 +32,9 @@ io.on('connection', (socket) => {
 
     // Handle sending a message
     socket.on('sendMessage', async (data) => {
-        const { room_id, sender_id, content } = data;
+        const { room_id, sender_id, sender_name, content } = data;
 
-        console.log('Received data:', data);  // Debugging log
+        console.log('Received data:', data); // Debugging log
 
         try {
             if (!room_id || !mongoose.Types.ObjectId.isValid(room_id)) {
@@ -54,14 +55,15 @@ io.on('connection', (socket) => {
             io.to(room_id).emit('receiveMessage', {
                 room_id,
                 sender_id,
+                sender_name,
                 content,
                 timestamp: new Date(),
             });
 
-            // Fetch room members to send FCM notifications
+            // Fetch room members to send FCM notifications and save notifications
             const room = await ChatRoom.findById(room_id).populate({
                 path: 'members',
-                select: 'firebaseToken', // Populate only the firebaseToken field
+                select: '_id firebaseToken', // Populate only the _id and firebaseToken fields
             });
 
             if (!room) {
@@ -69,27 +71,41 @@ io.on('connection', (socket) => {
                 return;
             }
 
-            // Send FCM to all other members in the room (excluding sender)
-            for (const member of room.members) {
-                if (member._id.toString() !== sender_id && member.firebaseToken) {
-                    const fcmMessage = {
-                        notification: {
-                            title: 'New Message',
-                            body: content,
-                        },
-                        token: member.firebaseToken,
-                    };
+            // Send FCM to all other members in the room (excluding sender) and save notifications
+            const notificationPromises = room.members.map(async (member) => {
+                if (member._id.toString() !== sender_id) {
+                    // Save notification to the database
+                    const notification = new Notification({
+                        user_id: member._id,
+                        title: sender_name,
+                        body: content,
+                    });
+                    await notification.save();
 
-                    // Send FCM using Firebase Admin SDK
-                    await admin.messaging().send(fcmMessage)
-                        .then((response) => {
-                            console.log(`FCM sent to ${member._id}:`, response);
-                        })
-                        .catch((error) => {
-                            console.error(`Error sending FCM to ${member._id}:`, error.message);
-                        });
+                    // Send FCM notification if firebaseToken exists
+                    if (member.firebaseToken) {
+                        const fcmMessage = {
+                            notification: {
+                                title: sender_name,
+                                body: content,
+                            },
+                            token: member.firebaseToken,
+                        };
+
+                        // Send FCM using Firebase Admin SDK
+                        await admin.messaging().send(fcmMessage)
+                            .then((response) => {
+                                console.log(`FCM sent to ${member._id}:`, response);
+                            })
+                            .catch((error) => {
+                                console.error(`Error sending FCM to ${member._id}:`, error.message);
+                            });
+                    }
                 }
-            }
+            });
+
+            // Wait for all notifications and FCM messages to be processed
+            await Promise.all(notificationPromises);
 
         } catch (error) {
             console.error('Error processing sendMessage:', error.message);

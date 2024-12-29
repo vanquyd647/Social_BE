@@ -1,11 +1,29 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-const notificationSchema = new mongoose.Schema(
+const notificationSchema = new Schema(
     {
-        user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-        type: { type: String, enum: ['like', 'comment', 'follow', 'friend_request'], required: true },
-        content: { type: String, required: true },
-        is_read: { type: Boolean, default: false },
+        user_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+        },
+        title: {
+            type: String,
+            required: true,
+        },
+        body: {
+            type: String,
+            required: true,
+        },
+        is_read: {
+            type: Boolean,
+            default: false, // Notification is unread by default
+        },
+        timestamp: {
+            type: Date,
+            default: Date.now,
+        },
     },
     { timestamps: true }
 );

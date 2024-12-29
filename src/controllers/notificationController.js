@@ -3,7 +3,7 @@ const Notification = require('../models/Notification');
 // Lấy danh sách thông báo của người dùng
 const getNotifications = async (req, res) => {
     try {
-        const { user_id } = req.params; // ID của người dùng để lấy thông báo
+        const user_id = req.userId; // Lấy user_id từ middleware
 
         // Lấy thông báo của người dùng từ database, có thể paginate nếu cần
         const notifications = await Notification.find({ user_id })
@@ -23,11 +23,12 @@ const getNotifications = async (req, res) => {
 // Đánh dấu thông báo là đã đọc
 const markNotificationAsRead = async (req, res) => {
     try {
+        const user_id = req.userId; // Lấy user_id từ middleware
         const { notification_id } = req.params; // ID của thông báo cần đánh dấu là đã đọc
 
         // Cập nhật trạng thái thông báo thành đã đọc
-        const notification = await Notification.findByIdAndUpdate(
-            notification_id,
+        const notification = await Notification.findOneAndUpdate(
+            { _id: notification_id, user_id }, // Đảm bảo chỉ cập nhật thông báo của người dùng
             { is_read: true },
             { new: true }
         );

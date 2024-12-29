@@ -3,12 +3,13 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notificationController');
+const authenticateToken = require('../middlewares/authMiddleware');
 
 
 // Lấy danh sách thông báo
-router.get('/:user_id', notificationController.getNotifications);
+router.get('/', authenticateToken, notificationController.getNotifications);
 
 // Đánh dấu thông báo đã đọc
-router.put('/:notification_id/mark-read', notificationController.markNotificationAsRead);
+router.put('/:notification_id', authenticateToken, notificationController.markNotificationAsRead);
 
 module.exports = router;
